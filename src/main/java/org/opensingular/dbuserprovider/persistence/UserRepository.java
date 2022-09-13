@@ -130,7 +130,6 @@ public class UserRepository {
     }
     
     public Optional<Map<String, String>> findUserByUsername(String username) {
-        username = "%" +username + "%";
         return Optional.ofNullable(doQuery(queryConfigurations.getFindByUsername(), null, this::readMap, username))
                        .orElse(Collections.emptyList())
                        .stream().findFirst();
@@ -141,7 +140,7 @@ public class UserRepository {
             return doQuery(queryConfigurations.getListAll(), pageable, this::readMap);
         }
         search = "%" + search + "%";
-        return doQuery(queryConfigurations.getFindBySearchTerm(), pageable, this::readMap, search);
+        return doQuery(queryConfigurations.getFindBySearchTerm(), pageable, this::readMap, search, search);
     }
     
     public boolean validateCredentials(String username, String password) {
