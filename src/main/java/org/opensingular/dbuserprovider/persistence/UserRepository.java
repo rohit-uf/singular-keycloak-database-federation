@@ -116,8 +116,9 @@ public class UserRepository {
         if (search == null || search.isEmpty()) {
             return Optional.ofNullable(doQuery(queryConfigurations.getCount(), null, this::readInt)).orElse(0);
         } else {
+            search = "%" + search + "%";
             String query = String.format("select count(*) from (%s) count", queryConfigurations.getFindBySearchTerm());
-            return Optional.ofNullable(doQuery(query, null, this::readInt, search)).orElse(0);
+            return Optional.ofNullable(doQuery(query, null, this::readInt, search, search)).orElse(0);
         }
     }
     

@@ -99,7 +99,7 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
                                            .label("JDBC URL")
                                            .helpText("JDBC Connection String")
                                            .type(ProviderConfigProperty.STRING_TYPE)
-                                           .defaultValue("jdbc:jtds:sqlserver://server-name/database_name;instance=instance_name")
+                                           .defaultValue("jdbc:postgresql://<database_host>:<port>/<database_name>")
                                            .add()
                                            .property()
                                            .name("user")
@@ -121,7 +121,7 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
                                            .helpText("Relational Database Management System")
                                            .type(ProviderConfigProperty.LIST_TYPE)
                                            .options(RDBMS.getAllDescriptions())
-                                           .defaultValue(RDBMS.SQL_SERVER.getDesc())
+                                           .defaultValue(RDBMS.POSTGRESQL.getDesc())
                                            .add()
                                            .property()
                                            .name("allowKeycloakDelete")
@@ -136,7 +136,7 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
                                            // Technical details for the following comment: we aggregate both the existing Keycloak version and the DB version of an attribute in a Set, but since e.g. email is not a list of values on the Keycloak User, the new email is never set on it.
                                            .helpText("By default, once a user is loaded in Keycloak, its attributes (e.g. 'email') stay as they are in Keycloak even if an attribute of the same name now returns a different value through the query.  Activate this option to have all attributes set in the SQL query to always overwrite the existing user attributes in Keycloak (e.g. if Keycloak user has email 'test@test.com' but the query fetches a field named 'email' that has a value 'example@exemple.com', the Keycloak user will now have email attribute = 'example@exemple.com'). This behavior works with NO_CAHCE configuration. In case you set this flag under a cached configuration, the user attributes will be reload if: 1) the cached value is older than 500ms and 2) username or e-mail does not match cached values.")
                                            .type(ProviderConfigProperty.BOOLEAN_TYPE)
-                                           .defaultValue("false")
+                                           .defaultValue("true")
                                            .add()
         
                                            //QUERIES
@@ -154,13 +154,7 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
                                            .label("List All Users SQL query")
                                            .helpText(DEFAULT_HELP_TEXT)
                                            .type(ProviderConfigProperty.STRING_TYPE)
-                                           .defaultValue("select \"id\"," +
-                                                         "            \"username\"," +
-                                                         "            \"email\"," +
-                                                         "            \"firstName\"," +
-                                                         "            \"lastName\"," +
-                                                         "            \"cpf\"," +
-                                                         "            \"fullName\" from users ")
+                                           .defaultValue("select \"id\", \"username\", \"email\", \"first_name\", \"last_name\" from accounts_customuser")
                                            .add()
         
                                            .property()
@@ -168,41 +162,23 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
                                            .label("Find user by id SQL query")
                                            .helpText(DEFAULT_HELP_TEXT + String.format(PARAMETER_HELP, "user id") + PARAMETER_PLACEHOLDER_HELP)
                                            .type(ProviderConfigProperty.STRING_TYPE)
-                                           .defaultValue("select \"id\"," +
-                                                         "            \"username\"," +
-                                                         "            \"email\"," +
-                                                         "            \"firstName\"," +
-                                                         "            \"lastName\"," +
-                                                         "            \"cpf\"," +
-                                                         "            \"fullName\" from users where \"id\" = ? ")
+                                           .defaultValue("select \"id\", \"username\", \"email\", \"first_name\", \"last_name\" from accounts_customuser where \"id\"::varchar(255) = ?")
                                            .add()
-        
+                                           
                                            .property()
                                            .name("findByUsername")
-                                           .label("Find user by username SQL query")
+                                           .label("Find user by email SQL query")
                                            .helpText(DEFAULT_HELP_TEXT + String.format(PARAMETER_HELP, "user username") + PARAMETER_PLACEHOLDER_HELP)
                                            .type(ProviderConfigProperty.STRING_TYPE)
-                                           .defaultValue("select \"id\"," +
-                                                         "            \"username\"," +
-                                                         "            \"email\"," +
-                                                         "            \"firstName\"," +
-                                                         "            \"lastName\"," +
-                                                         "            \"cpf\"," +
-                                                         "            \"fullName\" from users where \"username\" = ? ")
+                                           .defaultValue("select \"id\", \"username\", \"email\", \"first_name\", \"last_name\" from accounts_customuser where \"email\" = ?")
                                            .add()
-        
+                                           
                                            .property()
                                            .name("findBySearchTerm")
                                            .label("Find user by search term SQL query")
                                            .helpText(DEFAULT_HELP_TEXT + String.format(PARAMETER_HELP, "search term") + PARAMETER_PLACEHOLDER_HELP)
                                            .type(ProviderConfigProperty.STRING_TYPE)
-                                           .defaultValue("select \"id\"," +
-                                                         "            \"username\"," +
-                                                         "            \"email\"," +
-                                                         "            \"firstName\"," +
-                                                         "            \"lastName\"," +
-                                                         "            \"cpf\"," +
-                                                         "            \"fullName\" from users where upper(\"username\") like (?)  or upper(\"email\") like (?) or upper(\"fullName\") like (?)")
+                                           .defaultValue("select \"id\", \"username\", \"email\", \"first_name\", \"last_name\" from accounts_customuser where \"email\" like (?) or \"username\" like (?)")
                                            .add()
         
                                            .property()
@@ -210,7 +186,7 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
                                            .label("Find password hash (blowfish or hash digest hex) SQL query")
                                            .helpText(DEFAULT_HELP_TEXT + String.format(PARAMETER_HELP, "user username") + PARAMETER_PLACEHOLDER_HELP)
                                            .type(ProviderConfigProperty.STRING_TYPE)
-                                           .defaultValue("select hash_pwd from users where \"username\" = ? ")
+                                           .defaultValue("select \"password\" from accounts_customuser where \"username\" = ? ")
                                            .add()
                                            .property()
                                            .name("hashFunction")
@@ -218,7 +194,7 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
                                            .helpText("Hash type used to match passwrod (md* e sha* uses hex hash digest)")
                                            .type(ProviderConfigProperty.LIST_TYPE)
                                            .options("Blowfish (bcrypt)", "MD2", "MD5", "SHA-1", "SHA-256", "SHA3-224", "SHA3-256", "SHA3-384", "SHA3-512", "SHA-384", "SHA-512/224", "SHA-512/256", "SHA-512", "PBKDF2-SHA256")
-                                           .defaultValue("SHA-1")
+                                           .defaultValue("PBKDF2-SHA256")
                                            .add()
                                            .build();
     }
